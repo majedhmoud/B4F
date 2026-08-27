@@ -42,8 +42,10 @@ let selectedUserId: number = 0;
 
 // The parts of the page that JavaScript needs to change.
 const taskList = document.querySelector("#taskList");
-const loadingMessage = document.querySelector("#loadingMessage");
-const errorMessage = document.querySelector("#errorMessage");
+const loadingMessage: HTMLParagraphElement | null =
+  document.querySelector("#loadingMessage");
+const errorMessage: HTMLParagraphElement | null =
+  document.querySelector("#errorMessage");
 const progressText = document.querySelector("#progressText");
 
 // The search box is an <input>, and we need its .value property, which only
@@ -64,24 +66,22 @@ const peopleList = document.querySelector("#peopleList");
 // The way back to everybody's tasks.
 const allPeopleButton = document.querySelector("#allPeopleButton");
 
-const filterAllButton = document.querySelector(
-  "#filterAll",
-) as HTMLButtonElement;
-const filterCompletedButton = document.querySelector(
-  "#filterCompleted",
-) as HTMLButtonElement;
-const filterPendingButton = document.querySelector(
-  "#filterPending",
-) as HTMLButtonElement;
+const filterAllButton = document.querySelector("#filterAll");
+const filterCompletedButton = document.querySelector("#filterCompleted");
+const filterPendingButton = document.querySelector("#filterPending");
 
 // Show the waiting message and hide any old error message.
 function showLoading(): void {
-  loadingMessage?.classList.remove("hidden");
-  errorMessage?.classList.add("hidden");
+  if (!loadingMessage || !errorMessage) return;
+
+  loadingMessage.classList.remove("hidden");
+  errorMessage.classList.add("hidden");
 }
 
 function hideLoading(): void {
-  loadingMessage?.classList.add("hidden");
+  if (!loadingMessage) return;
+
+  loadingMessage.classList.add("hidden");
 }
 
 // Hide the waiting message and tell the user that something went wrong.
@@ -147,13 +147,24 @@ async function loadUsers() {
 // but does not return one. getVisibleTasks returns one but receives
 // nothing. This is the only function that does both.
 function getUserName(userId: number) {
-  for (const user of users) {
-    if (user.id === userId) {
-      // Returning inside the loop stops the loop immediately.
-      return user.name;
-    }
+  const user: User | undefined = users.find(function (user) {
+    return user.id === userId;
+  });
+
+  if (user) {
+    return user.name;
   }
-  return "Unkown person";
+
+  return "Unknown person";
+
+  // for (const user of users) {
+  //   if (user.id === userId) {
+  //     // Returning inside the loop stops the loop immediately.
+  //     return user.name;
+  //   }
+  // }
+
+  // return "Unknown person";
 }
 
 // Count how many of the loaded tasks belong to each person. The outer loop
@@ -255,34 +266,46 @@ function setPerson(userId: number): void {
 // functions, each counting completed tasks on its own - we were
 // calculating the same thing twice.
 function updateTaskSummary(): void {
-  let completed = 0;
-
-  for (const task of tasks) {
-    if (task.completed) {
-      completed++;
-    }
+  if (!totalCount || !completedCount || !pendingCount || !progressText) {
+    return;
   }
 
-  const pending = tasks.length - completed;
-  if (totalCount) totalCount.textContent = String(tasks.length);
-  if (completedCount) completedCount.textContent = String(completed);
-  if (pendingCount) pendingCount.textContent = String(pending);
+  // let completed = 0;
 
-  if (progressText)
-    progressText.textContent = `${completed} of ${tasks.length} tasks completed`;
+  // for (const task of tasks) {
+  //   if (task.completed) {
+  //     completed++;
+  //   }
+  // }
+
+  const completed = tasks.reduce(function (i, task) {
+    if (task.completed) {
+      return i + 1;
+    }
+
+    return i;
+  }, 0);
+
+  const pending = tasks.length - completed;
+
+  totalCount.textContent = String(tasks.length);
+  completedCount.textContent = String(completed);
+  pendingCount.textContent = String(pending);
+
+  progressText.textContent = `${completed} of ${tasks.length} tasks completed`;
 }
 
 // Build a smaller list that only holds the tasks the user wants to see. A
 // task must pass THREE checks: the status filter, the search text, and the
 // chosen person.
 function getVisibleTasks(): Task[] {
-  const visibleTasks: Task[] = [];
+  // const visibleTasks: Task[] = [];
 
   // The user's search text does not change while this loop is running, so
   // it is only calculated once, before the loop starts.
   const search = searchText.toLowerCase();
 
-  for (const task of tasks) {
+  return tasks.filter(function (task) {
     let matchesFilter = false;
 
     if (currentFilter === "all") {
@@ -293,13 +316,9 @@ function getVisibleTasks(): Task[] {
       matchesFilter = true;
     }
 
-    // Every task has a different title, so this still has to happen
-    // inside the loop.
     const title = task.title.toLowerCase();
     const matchesSearch = title.includes(search);
 
-    // The third check. While nobody is chosen this stays true for
-    // every task, so the list behaves as it always did.
     let matchesPerson = false;
 
     if (selectedUserId === 0) {
@@ -308,13 +327,40 @@ function getVisibleTasks(): Task[] {
       matchesPerson = true;
     }
 
-    // All three must agree before a task is shown.
-    if (matchesFilter && matchesSearch && matchesPerson) {
-      visibleTasks.push(task);
-    }
-  }
+    return matchesFilter && matchesSearch && matchesPerson;
+  });
 
-  return visibleTasks;
+  // for (const task of tasks) {
+  //   let matchesFilter = false;
+
+  //   if (currentFilter === "all") {
+  //     matchesFilter = true;
+  //   } else if (currentFilter === "completed" && task.completed) {
+  //     matchesFilter = true;
+  //   } else if (currentFilter === "pending" && !task.completed) {
+  //     matchesFilter = true;
+  //   }
+
+  //   // Every task has a different title, so this still has to happen
+  //   // inside the loop.
+  //   const title = task.title.toLowerCase();
+  //   const matchesSearch = title.includes(search);
+
+  //   // The third check. While nobody is chosen this stays true for
+  //   // every task, so the list behaves as it always did.
+  //   let matchesPerson = false;
+
+  //   if (selectedUserId === 0) {
+  //     matchesPerson = true;
+  //   } else if (task.userId === selectedUserId) {
+  //     matchesPerson = true;
+  //   }
+
+  //   // All three must agree before a task is shown.
+  //   if (matchesFilter && matchesSearch && matchesPerson) {
+  //     visibleTasks.push(task);
+  //   }
+  // }
 }
 
 // Build the HTML for the visible tasks and put it on the page.
@@ -364,7 +410,7 @@ function renderTasks(): void {
 
 // Remember the new filter, move the blue colour to the button the user
 // clicked, and draw the list again.
-function setFilter(newFilter: string, clickedButton: HTMLButtonElement): void {
+function setFilter(newFilter: string, clickedButton: Element): void {
   currentFilter = newFilter;
 
   if (!filterAllButton || !filterCompletedButton || !filterPendingButton) {
