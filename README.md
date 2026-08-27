@@ -1,2 +1,2 @@
-# B4F
-this repo contains Mr. Nawar's repo also
+# B4F-Cohort8
+Nano projects that are done through the Bytes For Future course
